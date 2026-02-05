@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sports Graphics Maker</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #111827;
+            color: #f3f4f6;
+        }
+        .oswald {
+            font-family: 'Oswald', sans-serif;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; 
+            border-radius: 4px;
+        }
+        canvas {
+            background-color: #1f2937; /* Default canvas bg before draw */
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // --- Icons ---
+        const Icon = ({ children, size = 20, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+        const UsersIcon = (props) => <Icon {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>;
+        const ImageIcon = (props) => <Icon {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></Icon>;
+        const DownloadIcon = (props) => <Icon {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Icon>;
+        const Trash2Icon = (props) => <Icon {...props}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></Icon>;
+        const PlusIcon = (props) => <Icon {...props}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Icon>;
+        const LayoutIcon = (props) => <Icon {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></Icon>;
+        const SettingsIcon = (props) => <Icon {...props}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>;
+        const TrophyIcon = (props) => <Icon {...props}><path d="M8 21h8m-4-9v9m-8-3h16m-5-6V5a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm5-11v4m-12 0v-4"/></Icon>;
+        const ShirtIcon = (props) => <Icon {...props}><path d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></Icon>;
+        const RefreshIcon = (props) => <Icon {...props}><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></Icon>;
+
+        // --- Sample Data ---
+        const INITIAL_PLAYERS = [
+            { id: 1, name: "SHOHOKU", number: "10", position: "PF", image: null }, 
+            { id: 2, name: "RUKAWA", number: "11", position: "SF", image: null },
+        ];
+
+        // --- Helper Components ---
+        const ImageUploader = ({ onImageSelect }) => {
+            const fileInputRef = useRef(null);
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => onImageSelect(reader.result);
+                    reader.readAsDataURL(file);
+                }
+            };
+            return (
+                <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-gray-600 hover:border-blue-500 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer transition-colors bg-gray-800 h-32 group">
+                    <ImageIcon className="text-gray-400 mb-2 group-hover:text-blue-500" size={32} />
+                    <span className="text-xs text-gray-400 group-hover:text-blue-400">画像を選択</span>
+                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                </div>
+            );
+        };
+
+        // --- Roster Component (Extracted) ---
+        const Roster = ({ players, addPlayer, removePlayer, updatePlayerImage }) => {
+            const [newPlayer, setNewPlayer] = useState({ name: '', number: '', position: '' });
+            const [showAddForm, setShowAddForm] = useState(false);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!newPlayer.name) return;
+                addPlayer(newPlayer);
+                setNewPlayer({ name: '', number: '', position: '' });
+                setShowAddForm(false);
+            };
+
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            <UsersIcon className="text-blue-500" /> 登録選手一覧
+                        </h2>
+                        <button onClick={() => setShowAddForm(!showAddForm)} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm transition-colors">
+                            <PlusIcon size={16} /> 選手を追加
+                        </button>
+                    </div>
+
+                    {showAddForm && (
+                        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 mb-6 shadow-lg">
+                            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <input type="text" placeholder="名前" className="bg-gray-700 border border-gray-600 text-white rounded p-2" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer, name: e.target.value})} />
+                                <input type="text" placeholder="背番号" className="bg-gray-700 border border-gray-600 text-white rounded p-2" value={newPlayer.number} onChange={e => setNewPlayer({...newPlayer, number: e.target.value})} />
+                                <input type="text" placeholder="Pos" className="bg-gray-700 border border-gray-600 text-white rounded p-2" value={newPlayer.position} onChange={e => setNewPlayer({...newPlayer, position: e.target.value})} />
+                                <button type="submit" className="bg-green-600 hover:bg-green-500 text-white rounded p-2 font-bold">保存</button>
+                            </form>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {players.map(player => (
+                            <div key={player.id} className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 relative group shadow">
+                                <div className="h-40 bg-gray-900 flex items-center justify-center relative">
+                                    {player.image ? (
+                                        <img src={player.image} alt={player.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-4xl font-bold text-gray-700">{player.number}</span>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                        <label className="cursor-pointer bg-white text-black px-3 py-1 rounded-full text-xs font-bold hover:bg-gray-200">
+                                            画像変更
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                                                const file = e.target.files[0];
+                                                if(file) {
+                                                    const reader = new FileReader();
+                                                    reader.onloadend = () => updatePlayerImage(player.id, reader.result);
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}/>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div className="p-3">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="text-xs text-gray-400 font-bold">{player.position}</p>
+                                            <h3 className="font-bold oswald text-lg truncate w-24">{player.name}</h3>
+                                        </div>
+                                        <span className="text-xl oswald font-bold text-blue-500">#{player.number}</span>
+                                    </div>
+                                    <button onClick={() => removePlayer(player.id)} className="mt-2 text-xs text-red-400 hover:text-red-300 flex items-center gap-1 opacity-60 hover:opacity-100"><Trash2Icon size={12} /> 削除</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Editor Component (Extracted) ---
+        const Editor = ({ players }) => {
+            const [template, setTemplate] = useState('focus');
+            const [canvasSettings, setCanvasSettings] = useState({
+                title: "MATCH DAY",
+                subtitle: "VS ENEMY TEAM",
+                accentColor: "#ef4444",
+                secondaryColor: "#111827",
+                selectedPlayerId: "",
+                scoreHome: "2",
+                scoreAway: "1",
+                bgImage: null
+            });
+            const canvasRef = useRef(null);
+
+            // --- Helper: Draw Image ---
+            const drawImageProp = (ctx, src, x, y, w, h, fit = 'cover', alpha = 1.0) => {
+                return new Promise((resolve) => {
+                    if (!src) { resolve(); return; }
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.src = src;
+                    img.onload = () => {
+                        ctx.save();
+                        ctx.globalAlpha = alpha;
+                        let drawX = x, drawY = y, drawW = w, drawH = h;
+                        if (fit === 'cover') {
+                            const scale = Math.max(w / img.width, h / img.height);
+                            const newW = img.width * scale;
+                            const newH = img.height * scale;
+                            drawX = x + (w - newW) / 2;
+                            drawY = y + (h - newH) / 2;
+                            drawW = newW;
+                            drawH = newH;
+                            ctx.beginPath();
+                            ctx.rect(x, y, w, h);
+                            ctx.clip();
+                            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+                        } else {
+                            ctx.drawImage(img, x, y, w, h);
+                        }
+                        ctx.restore();
+                        resolve();
+                    };
+                    img.onerror = resolve;
+                });
+            };
+
+            // --- Draw Logic ---
+            const drawCanvas = useCallback(async () => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                
+                // Canvas Size Setup
+                const width = 540;
+                const height = 960;
+                canvas.width = width;
+                canvas.height = height;
+
+                // Background
+                ctx.fillStyle = canvasSettings.secondaryColor;
+                ctx.fillRect(0, 0, width, height);
+
+                // Wait for fonts
+                await document.fonts.ready;
+
+                // BG Image
+                if (canvasSettings.bgImage) {
+                    await drawImageProp(ctx, canvasSettings.bgImage, 0, 0, width, height, 'cover', 0.5);
+                } else {
+                    ctx.fillStyle = canvasSettings.accentColor;
+                    ctx.globalAlpha = 0.1;
+                    ctx.beginPath();
+                    ctx.moveTo(0, height * 0.7);
+                    ctx.lineTo(width, height * 0.4);
+                    ctx.lineTo(width, height);
+                    ctx.lineTo(0, height);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                }
+
+                // Templates
+                if (template === 'focus') {
+                    const player = players.find(p => p.id === parseInt(canvasSettings.selectedPlayerId));
+                    if (player && player.image) {
+                        await drawImageProp(ctx, player.image, 0, 0, width, height, 'cover', 1.0);
+                        const grad = ctx.createLinearGradient(0, height * 0.4, 0, height);
+                        grad.addColorStop(0, 'rgba(0,0,0,0)');
+                        grad.addColorStop(0.7, 'rgba(0,0,0,0.8)');
+                        grad.addColorStop(1, canvasSettings.secondaryColor);
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(0, 0, width, height);
+                    } else {
+                        // Only fill bg if no bg image, otherwise keep bg image visible
+                        if (!canvasSettings.bgImage) {
+                            ctx.fillStyle = '#374151';
+                            ctx.fillRect(0, 0, width, height);
+                        }
+                        
+                        ctx.fillStyle = '#9ca3af';
+                        ctx.font = 'bold 24px "Noto Sans JP"';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText("選手を選択してください", width/2, height/2);
+                        ctx.textBaseline = 'alphabetic';
+                    }
+
+                    ctx.fillStyle = canvasSettings.accentColor;
+                    ctx.fillRect(20, height - 220, 5, 140);
+
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'left';
+                    ctx.font = 'bold 30px Oswald';
+                    ctx.fillText(canvasSettings.title.toUpperCase(), 40, 80);
+                    
+                    ctx.font = '20px "Noto Sans JP"';
+                    ctx.fillStyle = canvasSettings.accentColor;
+                    ctx.fillText(canvasSettings.subtitle, 40, 110);
+
+                    if (player) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                        ctx.font = 'bold italic 250px Oswald';
+                        ctx.textAlign = 'right';
+                        ctx.fillText(player.number, width - 20, height - 50);
+
+                        ctx.textAlign = 'left';
+                        ctx.fillStyle = '#fff';
+                        ctx.font = 'bold 60px Oswald';
+                        ctx.fillText(player.number, 40, height - 140);
+                        ctx.font = 'bold 40px Oswald';
+                        ctx.fillText(player.name.toUpperCase(), 40, height - 90);
+                        ctx.font = '24px Oswald';
+                        ctx.fillStyle = '#d1d5db';
+                        ctx.fillText(player.position, 40, height - 50);
+                    }
+                } 
+                else if (template === 'result') {
+                    // Removed bg overwrite
+                    ctx.strokeStyle = '#374151';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(width/2, height/2, 100, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = canvasSettings.accentColor;
+                    ctx.fillRect(0, 0, width, 100);
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'center';
+                    ctx.font = 'bold 40px Oswald';
+                    ctx.fillText(canvasSettings.title, width/2, 65);
+
+                    const scoreY = height/2 + 20;
+                    ctx.font = 'bold 120px Oswald';
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText(`${canvasSettings.scoreHome} - ${canvasSettings.scoreAway}`, width/2, scoreY);
+                    
+                    ctx.font = '24px "Noto Sans JP"';
+                    ctx.fillStyle = '#9ca3af';
+                    ctx.fillText("FULL TIME", width/2, scoreY - 100);
+
+                    ctx.font = 'bold 30px Oswald';
+                    ctx.fillStyle = canvasSettings.accentColor;
+                    ctx.fillText("HOME", width/2 - 100, scoreY + 80);
+                    ctx.fillText("AWAY", width/2 + 100, scoreY + 80);
+
+                    ctx.font = '20px "Noto Sans JP"';
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText(canvasSettings.subtitle, width/2, height - 50);
+                } 
+                else if (template === 'lineup') {
+                    // Removed bg overwrite
+
+                    ctx.fillStyle = canvasSettings.accentColor;
+                    ctx.fillRect(0, 0, width, 120);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold italic 40px Oswald';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(canvasSettings.title, width/2, 75);
+
+                    let startY = 180;
+                    const rowHeight = 65;
+                    const visiblePlayers = players.slice(0, 11);
+
+                    ctx.textAlign = 'left';
+                    for (let i = 0; i < visiblePlayers.length; i++) {
+                        const p = visiblePlayers[i];
+                        const y = startY + (i * rowHeight);
+
+                        if (i % 2 === 0) {
+                            ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                            ctx.fillRect(20, y - 40, width - 40, 50);
+                        }
+                        ctx.fillStyle = canvasSettings.accentColor;
+                        ctx.font = 'bold 24px Oswald';
+                        ctx.fillText(p.number, 40, y - 5);
+                        ctx.fillStyle = '#fff';
+                        ctx.font = 'bold 24px Oswald';
+                        ctx.fillText(p.name, 100, y - 5);
+                        ctx.fillStyle = '#9ca3af';
+                        ctx.font = '18px Oswald';
+                        ctx.textAlign = 'right';
+                        ctx.fillText(p.position, width - 40, y - 5);
+                        ctx.textAlign = 'left';
+                    }
+                }
+            }, [template, canvasSettings, players]);
+
+            // Draw effect
+            useEffect(() => {
+                drawCanvas();
+                const timer = setTimeout(drawCanvas, 500);
+                return () => clearTimeout(timer);
+            }, [drawCanvas]);
+
+            const downloadImage = () => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const link = document.createElement('a');
+                link.download = `sports-graphic-${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            };
+
+            return (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+                    <div className="lg:col-span-1 space-y-6 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
+                        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                            <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2">
+                                <LayoutIcon size={14} /> テンプレート
+                            </h3>
+                            <div className="grid grid-cols-3 gap-2">
+                                <button onClick={() => setTemplate('focus')} className={`p-2 rounded text-sm font-bold flex flex-col items-center gap-1 transition-colors ${template === 'focus' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}><UsersIcon size={16} /> Focus</button>
+                                <button onClick={() => setTemplate('result')} className={`p-2 rounded text-sm font-bold flex flex-col items-center gap-1 transition-colors ${template === 'result' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}><TrophyIcon size={16} /> Result</button>
+                                <button onClick={() => setTemplate('lineup')} className={`p-2 rounded text-sm font-bold flex flex-col items-center gap-1 transition-colors ${template === 'lineup' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}><ShirtIcon size={16} /> Lineup</button>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 space-y-4">
+                            <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2"><SettingsIcon size={14} /> 設定</h3>
+                            <div><label className="text-xs text-gray-400 block mb-1">メインタイトル</label><input type="text" value={canvasSettings.title} onChange={(e) => setCanvasSettings({...canvasSettings, title: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white" /></div>
+                            <div><label className="text-xs text-gray-400 block mb-1">サブタイトル</label><input type="text" value={canvasSettings.subtitle} onChange={(e) => setCanvasSettings({...canvasSettings, subtitle: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white" /></div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div><label className="text-xs text-gray-400 block mb-1">テーマ色</label><input type="color" value={canvasSettings.accentColor} onChange={(e) => setCanvasSettings({...canvasSettings, accentColor: e.target.value})} className="w-full h-8 bg-gray-700 rounded cursor-pointer" /></div>
+                                <div><label className="text-xs text-gray-400 block mb-1">背景色</label><input type="color" value={canvasSettings.secondaryColor} onChange={(e) => setCanvasSettings({...canvasSettings, secondaryColor: e.target.value})} className="w-full h-8 bg-gray-700 rounded cursor-pointer" /></div>
+                            </div>
+
+                            {template === 'focus' && (
+                                <div>
+                                    <label className="text-xs text-gray-400 block mb-1">対象選手</label>
+                                    <select value={canvasSettings.selectedPlayerId} onChange={(e) => setCanvasSettings({...canvasSettings, selectedPlayerId: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white">
+                                        <option value="">選択してください</option>
+                                        {players.map(p => <option key={p.id} value={p.id}>#{p.number} {p.name}</option>)}
+                                    </select>
+                                </div>
+                            )}
+                            {template === 'result' && (
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div><label className="text-xs text-gray-400 block mb-1">Home Score</label><input type="number" value={canvasSettings.scoreHome} onChange={(e) => setCanvasSettings({...canvasSettings, scoreHome: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded text-center text-white" /></div>
+                                    <div><label className="text-xs text-gray-400 block mb-1">Away Score</label><input type="number" value={canvasSettings.scoreAway} onChange={(e) => setCanvasSettings({...canvasSettings, scoreAway: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded text-center text-white" /></div>
+                                </div>
+                            )}
+                            <div>
+                                <label className="text-xs text-gray-400 block mb-1">背景画像 (任意)</label>
+                                <ImageUploader onImageSelect={(src) => setCanvasSettings({...canvasSettings, bgImage: src})} />
+                                {canvasSettings.bgImage && <button onClick={() => setCanvasSettings({...canvasSettings, bgImage: null})} className="text-xs text-red-400 mt-2 hover:underline">画像を削除</button>}
+                            </div>
+                        </div>
+                        
+                        <button onClick={downloadImage} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 shadow-lg"><DownloadIcon size={20} /> ダウンロード</button>
+                    </div>
+
+                    <div className="lg:col-span-2 flex flex-col items-center">
+                        <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 flex items-center justify-center shadow-2xl relative overflow-hidden mb-4 min-h-[500px] w-full">
+                            <canvas ref={canvasRef} className="max-h-[70vh] w-auto border border-gray-700 rounded shadow-lg" style={{ maxWidth: '100%' }} />
+                        </div>
+                        <button onClick={drawCanvas} className="text-gray-400 text-sm flex items-center gap-2 hover:text-white transition-colors bg-gray-800 px-4 py-2 rounded-full border border-gray-700">
+                            <RefreshIcon size={16} /> プレビューを更新
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main App Component ---
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('roster');
+            const [players, setPlayers] = useState(INITIAL_PLAYERS);
+
+            const addPlayer = (player) => setPlayers([...players, { ...player, id: Date.now() }]);
+            const removePlayer = (id) => setPlayers(players.filter(p => p.id !== id));
+            const updatePlayerImage = (id, imageSrc) => setPlayers(players.map(p => p.id === id ? { ...p, image: imageSrc } : p));
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    <header className="bg-gray-800 border-b border-gray-700 p-4 sticky top-0 z-20 shadow-md">
+                        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-2 rounded text-white"><TrophyIcon size={20} /></div>
+                                <h1 className="text-xl font-bold oswald tracking-wide">SPORTS GRAPHIC MAKER</h1>
+                            </div>
+                            <nav className="flex bg-gray-700 rounded-lg p-1">
+                                <button onClick={() => setActiveTab('roster')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'roster' ? 'bg-gray-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}>チーム管理</button>
+                                <button onClick={() => setActiveTab('editor')} className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${activeTab === 'editor' ? 'bg-gray-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}>画像作成</button>
+                            </nav>
+                        </div>
+                    </header>
+                    <main className="flex-1 max-w-6xl mx-auto w-full p-4 md:p-6">
+                        {activeTab === 'roster' ? (
+                            <Roster players={players} addPlayer={addPlayer} removePlayer={removePlayer} updatePlayerImage={updatePlayerImage} />
+                        ) : (
+                            <Editor players={players} />
+                        )}
+                    </main>
+                    <footer className="p-4 text-center text-gray-600 text-xs border-t border-gray-800">Sports Graphic Maker © 2026</footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
