@@ -67,6 +67,7 @@
         const ShirtIcon = (props) => <Icon {...props}><path d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></Icon>;
         const RefreshIcon = (props) => <Icon {...props}><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></Icon>;
         const PaletteIcon = (props) => <Icon {...props}><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 22a8 8 0 0 0 8-7c0-3.31-3-4-3-4-5-2-8 0-8 0v0a6 6 0 0 1-1.8 10.8"/></Icon>;
+        const SaveIcon = (props) => <Icon {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></Icon>;
 
 
         // --- Helper: Hex to RGBA ---
@@ -645,7 +646,25 @@
         // --- Main App Component ---
         const App = () => {
             const [activeTab, setActiveTab] = useState('roster');
-            const [players, setPlayers] = useState(INITIAL_PLAYERS);
+            
+            // 修正: localStorage から初期値を読み込む
+            const [players, setPlayers] = useState(() => {
+                const saved = localStorage.getItem('sports_graphics_maker_players');
+                if (saved) {
+                    try {
+                        return JSON.parse(saved);
+                    } catch (e) {
+                        console.error("Failed to parse local storage", e);
+                        return INITIAL_PLAYERS;
+                    }
+                }
+                return INITIAL_PLAYERS;
+            });
+
+            // 追加: players が変更されたら localStorage に保存
+            useEffect(() => {
+                localStorage.setItem('sports_graphics_maker_players', JSON.stringify(players));
+            }, [players]);
 
             const addPlayer = (player) => setPlayers([...players, { ...player, id: Date.now() }]);
             const removePlayer = (id) => setPlayers(players.filter(p => p.id !== id));
