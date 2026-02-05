@@ -48,7 +48,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback } = React;
+        const { useState, useEffect, useRef, useCallback, memo } = React;
 
         // --- Icons ---
         const Icon = ({ children, size = 20, className = "" }) => (
@@ -66,6 +66,23 @@
         const TrophyIcon = (props) => <Icon {...props}><path d="M8 21h8m-4-9v9m-8-3h16m-5-6V5a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm5-11v4m-12 0v-4"/></Icon>;
         const ShirtIcon = (props) => <Icon {...props}><path d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></Icon>;
         const RefreshIcon = (props) => <Icon {...props}><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></Icon>;
+        const PaletteIcon = (props) => <Icon {...props}><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 22a8 8 0 0 0 8-7c0-3.31-3-4-3-4-5-2-8 0-8 0v0a6 6 0 0 1-1.8 10.8"/></Icon>;
+
+
+        // --- Helper: Hex to RGBA ---
+        const hexToRgba = (hex, alpha) => {
+            let r = 0, g = 0, b = 0;
+            if (hex.length === 4) {
+                r = parseInt(hex[1] + hex[1], 16);
+                g = parseInt(hex[2] + hex[2], 16);
+                b = parseInt(hex[3] + hex[3], 16);
+            } else if (hex.length === 7) {
+                r = parseInt(hex.slice(1, 3), 16);
+                g = parseInt(hex.slice(3, 5), 16);
+                b = parseInt(hex.slice(5, 7), 16);
+            }
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
 
         // --- Sample Data ---
         const INITIAL_PLAYERS = [
@@ -93,7 +110,66 @@
             );
         };
 
-        // --- Roster Component (Extracted) ---
+        // Extracted ColorPicker (Fix for slider issue)
+        const ColorPicker = memo(({ label, value, onChange }) => {
+            const [localValue, setLocalValue] = useState(value);
+            const presets = ["#ffffff", "#000000", "#ef4444", "#3b82f6", "#f59e0b", "#10b981", "#8b5cf6"];
+
+            useEffect(() => {
+                setLocalValue(value);
+            }, [value]);
+
+            const handleBlur = () => {
+                if (/^#[0-9A-F]{6}$/i.test(localValue)) {
+                    onChange(localValue);
+                } else {
+                    setLocalValue(value);
+                }
+            };
+
+            const handleChange = (e) => {
+                const newVal = e.target.value;
+                setLocalValue(newVal);
+                onChange(newVal);
+            };
+
+            return (
+                <div className="mb-2">
+                    <label className="text-xs text-gray-400 block mb-1">{label}</label>
+                    <div className="flex items-center gap-2 mb-1">
+                        <div className="flex-1 flex items-center bg-gray-700 rounded p-1 border border-gray-600">
+                            <input 
+                                type="color" 
+                                value={value} 
+                                onChange={handleChange}
+                                className="w-8 h-6 rounded cursor-pointer border-none p-0 bg-transparent mr-2"
+                            />
+                            <input 
+                                type="text" 
+                                value={localValue}
+                                onChange={(e) => setLocalValue(e.target.value)}
+                                onBlur={handleBlur}
+                                className="bg-transparent text-xs text-white border-none focus:outline-none w-full font-mono uppercase"
+                                maxLength={7}
+                            />
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                        {presets.map(c => (
+                            <button 
+                                key={c}
+                                onClick={() => onChange(c)}
+                                className="w-4 h-4 rounded-full border border-gray-600 hover:scale-110 transition-transform"
+                                style={{ backgroundColor: c }}
+                                title={c}
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        });
+
+        // --- Roster Component ---
         const Roster = ({ players, addPlayer, removePlayer, updatePlayerImage }) => {
             const [newPlayer, setNewPlayer] = useState({ name: '', number: '', position: '' });
             const [showAddForm, setShowAddForm] = useState(false);
@@ -168,18 +244,31 @@
             );
         };
 
-        // --- Editor Component (Extracted) ---
+        // --- Editor Component ---
         const Editor = ({ players }) => {
             const [template, setTemplate] = useState('focus');
             const [canvasSettings, setCanvasSettings] = useState({
                 title: "MATCH DAY",
                 subtitle: "VS ENEMY TEAM",
-                accentColor: "#ef4444",
-                secondaryColor: "#111827",
+                teamHome: "HOME",
+                teamAway: "AWAY",
                 selectedPlayerId: "",
                 scoreHome: "2",
                 scoreAway: "1",
-                bgImage: null
+                bgImage: null,
+                
+                // Colors
+                secondaryColor: "#111827", // Background
+                accentColor: "#ef4444",    // Theme
+                
+                colorTitle: "#ffffff",
+                colorSubtitle: "#ef4444",
+                colorTeamName: "#ef4444",
+                colorScore: "#ffffff",
+                colorPlayerName: "#ffffff",
+                colorPlayerNumber: "#ffffff",
+                colorPosition: "#d1d5db",
+                colorGameDay: "#ffffff"
             });
             const canvasRef = useRef(null);
 
@@ -262,7 +351,6 @@
                         ctx.fillStyle = grad;
                         ctx.fillRect(0, 0, width, height);
                     } else {
-                        // Only fill bg if no bg image, otherwise keep bg image visible
                         if (!canvasSettings.bgImage) {
                             ctx.fillStyle = '#374151';
                             ctx.fillRect(0, 0, width, height);
@@ -279,71 +367,98 @@
                     ctx.fillStyle = canvasSettings.accentColor;
                     ctx.fillRect(20, height - 220, 5, 140);
 
-                    ctx.fillStyle = '#fff';
+                    // Title
+                    ctx.fillStyle = canvasSettings.colorTitle;
                     ctx.textAlign = 'left';
                     ctx.font = 'bold 30px Oswald';
                     ctx.fillText(canvasSettings.title.toUpperCase(), 40, 80);
                     
+                    // Subtitle
                     ctx.font = '20px "Noto Sans JP"';
-                    ctx.fillStyle = canvasSettings.accentColor;
+                    ctx.fillStyle = canvasSettings.colorSubtitle;
                     ctx.fillText(canvasSettings.subtitle, 40, 110);
 
+                    // "GAME DAY" at the bottom
+                    ctx.fillStyle = canvasSettings.colorGameDay;
+                    ctx.globalAlpha = 0.2;
+                    ctx.font = 'bold italic 80px Oswald';
+                    ctx.textAlign = 'center';
+                    ctx.fillText("GAME DAY", width / 2, height - 30);
+                    ctx.globalAlpha = 1.0;
+                    ctx.textAlign = 'left';
+
                     if (player) {
-                        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                        // Big Number Background
+                        ctx.fillStyle = hexToRgba(canvasSettings.colorPlayerNumber, 0.1);
                         ctx.font = 'bold italic 250px Oswald';
                         ctx.textAlign = 'right';
                         ctx.fillText(player.number, width - 20, height - 50);
 
                         ctx.textAlign = 'left';
-                        ctx.fillStyle = '#fff';
+                        
+                        // Number
+                        ctx.fillStyle = canvasSettings.colorPlayerNumber;
                         ctx.font = 'bold 60px Oswald';
                         ctx.fillText(player.number, 40, height - 140);
+                        
+                        // Name
+                        ctx.fillStyle = canvasSettings.colorPlayerName;
                         ctx.font = 'bold 40px Oswald';
                         ctx.fillText(player.name.toUpperCase(), 40, height - 90);
+                        
+                        // Position
                         ctx.font = '24px Oswald';
-                        ctx.fillStyle = '#d1d5db';
+                        ctx.fillStyle = canvasSettings.colorPosition;
                         ctx.fillText(player.position, 40, height - 50);
                     }
                 } 
                 else if (template === 'result') {
-                    // Removed bg overwrite
                     ctx.strokeStyle = '#374151';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
                     ctx.arc(width/2, height/2, 100, 0, Math.PI * 2);
                     ctx.stroke();
 
+                    // Header Bg
                     ctx.fillStyle = canvasSettings.accentColor;
                     ctx.fillRect(0, 0, width, 100);
-                    ctx.fillStyle = '#fff';
+                    
+                    // Title
+                    ctx.fillStyle = canvasSettings.colorTitle;
                     ctx.textAlign = 'center';
                     ctx.font = 'bold 40px Oswald';
                     ctx.fillText(canvasSettings.title, width/2, 65);
 
                     const scoreY = height/2 + 20;
+                    
+                    // Score
                     ctx.font = 'bold 120px Oswald';
-                    ctx.fillStyle = '#fff';
+                    ctx.fillStyle = canvasSettings.colorScore;
                     ctx.fillText(`${canvasSettings.scoreHome} - ${canvasSettings.scoreAway}`, width/2, scoreY);
                     
+                    // Full Time Text
                     ctx.font = '24px "Noto Sans JP"';
                     ctx.fillStyle = '#9ca3af';
                     ctx.fillText("FULL TIME", width/2, scoreY - 100);
 
+                    // Team Names
                     ctx.font = 'bold 30px Oswald';
-                    ctx.fillStyle = canvasSettings.accentColor;
-                    ctx.fillText("HOME", width/2 - 100, scoreY + 80);
-                    ctx.fillText("AWAY", width/2 + 100, scoreY + 80);
+                    ctx.fillStyle = canvasSettings.colorTeamName;
+                    ctx.fillText(canvasSettings.teamHome, width/2 - 100, scoreY + 80);
+                    ctx.fillText(canvasSettings.teamAway, width/2 + 100, scoreY + 80);
 
+                    // Footer Subtitle
                     ctx.font = '20px "Noto Sans JP"';
-                    ctx.fillStyle = '#fff';
+                    ctx.fillStyle = canvasSettings.colorSubtitle;
                     ctx.fillText(canvasSettings.subtitle, width/2, height - 50);
                 } 
                 else if (template === 'lineup') {
-                    // Removed bg overwrite
-
+                    // Header Bg
                     ctx.fillStyle = canvasSettings.accentColor;
                     ctx.fillRect(0, 0, width, 120);
-                    ctx.fillStyle = '#fff';
+                    
+                    // Title
+                    ctx.fillStyle = canvasSettings.colorTitle;
                     ctx.font = 'bold italic 40px Oswald';
                     ctx.textAlign = 'center';
                     ctx.fillText(canvasSettings.title, width/2, 75);
@@ -361,13 +476,19 @@
                             ctx.fillStyle = 'rgba(255,255,255,0.05)';
                             ctx.fillRect(20, y - 40, width - 40, 50);
                         }
-                        ctx.fillStyle = canvasSettings.accentColor;
+                        
+                        // Number
+                        ctx.fillStyle = canvasSettings.colorPlayerNumber;
                         ctx.font = 'bold 24px Oswald';
                         ctx.fillText(p.number, 40, y - 5);
-                        ctx.fillStyle = '#fff';
+                        
+                        // Name
+                        ctx.fillStyle = canvasSettings.colorPlayerName;
                         ctx.font = 'bold 24px Oswald';
                         ctx.fillText(p.name, 100, y - 5);
-                        ctx.fillStyle = '#9ca3af';
+                        
+                        // Position
+                        ctx.fillStyle = canvasSettings.colorPosition;
                         ctx.font = '18px Oswald';
                         ctx.textAlign = 'right';
                         ctx.fillText(p.position, width - 40, y - 5);
@@ -376,11 +497,20 @@
                 }
             }, [template, canvasSettings, players]);
 
-            // Draw effect
+            // Draw effect with optimized loop
             useEffect(() => {
-                drawCanvas();
-                const timer = setTimeout(drawCanvas, 500);
-                return () => clearTimeout(timer);
+                let animationFrameId;
+                
+                const render = async () => {
+                    await drawCanvas();
+                };
+
+                // Use requestAnimationFrame for smoother updates
+                animationFrameId = requestAnimationFrame(render);
+
+                return () => {
+                    cancelAnimationFrame(animationFrameId);
+                };
             }, [drawCanvas]);
 
             const downloadImage = () => {
@@ -392,9 +522,15 @@
                 link.click();
             };
 
+            const handleColorChange = useCallback((field, val) => {
+                setCanvasSettings(prev => ({...prev, [field]: val}));
+            }, []);
+
             return (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
                     <div className="lg:col-span-1 space-y-6 overflow-y-auto max-h-[85vh] pr-2 custom-scrollbar">
+                        
+                        {/* 1. Template Selector */}
                         <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
                             <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2">
                                 <LayoutIcon size={14} /> テンプレート
@@ -406,15 +542,15 @@
                             </div>
                         </div>
 
+                        {/* 2. Content Settings */}
                         <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 space-y-4">
-                            <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2"><SettingsIcon size={14} /> 設定</h3>
+                            <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2"><SettingsIcon size={14} /> コンテンツ設定</h3>
+                            
+                            {/* Common Fields */}
                             <div><label className="text-xs text-gray-400 block mb-1">メインタイトル</label><input type="text" value={canvasSettings.title} onChange={(e) => setCanvasSettings({...canvasSettings, title: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white" /></div>
-                            <div><label className="text-xs text-gray-400 block mb-1">サブタイトル</label><input type="text" value={canvasSettings.subtitle} onChange={(e) => setCanvasSettings({...canvasSettings, subtitle: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white" /></div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div><label className="text-xs text-gray-400 block mb-1">テーマ色</label><input type="color" value={canvasSettings.accentColor} onChange={(e) => setCanvasSettings({...canvasSettings, accentColor: e.target.value})} className="w-full h-8 bg-gray-700 rounded cursor-pointer" /></div>
-                                <div><label className="text-xs text-gray-400 block mb-1">背景色</label><input type="color" value={canvasSettings.secondaryColor} onChange={(e) => setCanvasSettings({...canvasSettings, secondaryColor: e.target.value})} className="w-full h-8 bg-gray-700 rounded cursor-pointer" /></div>
-                            </div>
-
+                            <div><label className="text-xs text-gray-400 block mb-1">サブタイトル / 日付</label><input type="text" value={canvasSettings.subtitle} onChange={(e) => setCanvasSettings({...canvasSettings, subtitle: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white" /></div>
+                            
+                            {/* Template Specific Fields */}
                             {template === 'focus' && (
                                 <div>
                                     <label className="text-xs text-gray-400 block mb-1">対象選手</label>
@@ -425,19 +561,68 @@
                                 </div>
                             )}
                             {template === 'result' && (
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div><label className="text-xs text-gray-400 block mb-1">Home Score</label><input type="number" value={canvasSettings.scoreHome} onChange={(e) => setCanvasSettings({...canvasSettings, scoreHome: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded text-center text-white" /></div>
-                                    <div><label className="text-xs text-gray-400 block mb-1">Away Score</label><input type="number" value={canvasSettings.scoreAway} onChange={(e) => setCanvasSettings({...canvasSettings, scoreAway: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded text-center text-white" /></div>
+                                <div className="space-y-4 pt-2 border-t border-gray-700">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div><label className="text-xs text-gray-400 block mb-1">Home Team</label><input type="text" value={canvasSettings.teamHome} onChange={(e) => setCanvasSettings({...canvasSettings, teamHome: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white" /></div>
+                                        <div><label className="text-xs text-gray-400 block mb-1">Away Team</label><input type="text" value={canvasSettings.teamAway} onChange={(e) => setCanvasSettings({...canvasSettings, teamAway: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white" /></div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div><label className="text-xs text-gray-400 block mb-1">Home Score</label><input type="number" value={canvasSettings.scoreHome} onChange={(e) => setCanvasSettings({...canvasSettings, scoreHome: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded text-center text-white" /></div>
+                                        <div><label className="text-xs text-gray-400 block mb-1">Away Score</label><input type="number" value={canvasSettings.scoreAway} onChange={(e) => setCanvasSettings({...canvasSettings, scoreAway: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded text-center text-white" /></div>
+                                    </div>
                                 </div>
                             )}
-                            <div>
-                                <label className="text-xs text-gray-400 block mb-1">背景画像 (任意)</label>
-                                <ImageUploader onImageSelect={(src) => setCanvasSettings({...canvasSettings, bgImage: src})} />
-                                {canvasSettings.bgImage && <button onClick={() => setCanvasSettings({...canvasSettings, bgImage: null})} className="text-xs text-red-400 mt-2 hover:underline">画像を削除</button>}
+                        </div>
+
+                        {/* 3. Color Settings */}
+                        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700 space-y-4">
+                            <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2"><PaletteIcon size={14} /> カラー設定</h3>
+                            
+                            <div className="grid grid-cols-3 gap-2">
+                                {/* Base Colors - Always Visible */}
+                                <ColorPicker label="背景色" value={canvasSettings.secondaryColor} onChange={(val) => handleColorChange("secondaryColor", val)} />
+                                <ColorPicker label="テーマ色" value={canvasSettings.accentColor} onChange={(val) => handleColorChange("accentColor", val)} />
+                                <ColorPicker label="タイトル" value={canvasSettings.colorTitle} onChange={(val) => handleColorChange("colorTitle", val)} />
+                                
+                                {/* Dynamic Colors */}
+                                {(template === 'focus' || template === 'result') && (
+                                    <ColorPicker label="サブタイトル" value={canvasSettings.colorSubtitle} onChange={(val) => handleColorChange("colorSubtitle", val)} />
+                                )}
+
+                                {template === 'focus' && (
+                                    <>
+                                        <ColorPicker label="選手名" value={canvasSettings.colorPlayerName} onChange={(val) => handleColorChange("colorPlayerName", val)} />
+                                        <ColorPicker label="背番号" value={canvasSettings.colorPlayerNumber} onChange={(val) => handleColorChange("colorPlayerNumber", val)} />
+                                        <ColorPicker label="ポジション" value={canvasSettings.colorPosition} onChange={(val) => handleColorChange("colorPosition", val)} />
+                                        <ColorPicker label="GameDay" value={canvasSettings.colorGameDay} onChange={(val) => handleColorChange("colorGameDay", val)} />
+                                    </>
+                                )}
+
+                                {template === 'result' && (
+                                    <>
+                                        <ColorPicker label="チーム名" value={canvasSettings.colorTeamName} onChange={(val) => handleColorChange("colorTeamName", val)} />
+                                        <ColorPicker label="スコア" value={canvasSettings.colorScore} onChange={(val) => handleColorChange("colorScore", val)} />
+                                    </>
+                                )}
+
+                                {template === 'lineup' && (
+                                    <>
+                                        <ColorPicker label="選手名" value={canvasSettings.colorPlayerName} onChange={(val) => handleColorChange("colorPlayerName", val)} />
+                                        <ColorPicker label="背番号" value={canvasSettings.colorPlayerNumber} onChange={(val) => handleColorChange("colorPlayerNumber", val)} />
+                                        <ColorPicker label="ポジション" value={canvasSettings.colorPosition} onChange={(val) => handleColorChange("colorPosition", val)} />
+                                    </>
+                                )}
                             </div>
                         </div>
+
+                        {/* 4. Background Image */}
+                        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                             <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2">背景画像 (任意)</h3>
+                            <ImageUploader onImageSelect={(src) => setCanvasSettings({...canvasSettings, bgImage: src})} />
+                            {canvasSettings.bgImage && <button onClick={() => setCanvasSettings({...canvasSettings, bgImage: null})} className="text-xs text-red-400 mt-2 hover:underline">画像を削除</button>}
+                        </div>
                         
-                        <button onClick={downloadImage} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 shadow-lg"><DownloadIcon size={20} /> ダウンロード</button>
+                        <button onClick={downloadImage} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 shadow-lg"><DownloadIcon size={20} /> 画像をダウンロード</button>
                     </div>
 
                     <div className="lg:col-span-2 flex flex-col items-center">
