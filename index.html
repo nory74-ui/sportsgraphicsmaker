@@ -461,7 +461,12 @@
                     ctx.fillStyle = canvasSettings.colorTitle;
                     ctx.font = 'bold italic 40px Oswald';
                     ctx.textAlign = 'center';
-                    ctx.fillText(canvasSettings.title, width/2, 75);
+                    ctx.fillText(canvasSettings.title, width/2, 60);
+
+                    // Subtitle
+                    ctx.font = '20px "Noto Sans JP"';
+                    ctx.fillStyle = canvasSettings.colorSubtitle;
+                    ctx.fillText(canvasSettings.subtitle, width/2, 95);
 
                     let startY = 180;
                     const rowHeight = 65;
@@ -585,7 +590,7 @@
                                 <ColorPicker label="タイトル" value={canvasSettings.colorTitle} onChange={(val) => handleColorChange("colorTitle", val)} />
                                 
                                 {/* Dynamic Colors */}
-                                {(template === 'focus' || template === 'result') && (
+                                {(template === 'focus' || template === 'result' || template === 'lineup') && (
                                     <ColorPicker label="サブタイトル" value={canvasSettings.colorSubtitle} onChange={(val) => handleColorChange("colorSubtitle", val)} />
                                 )}
 
